@@ -2,11 +2,13 @@
 
 ########################################################################################
 #
-# softicar-samba-server-setup.sh  -  a Samba file server setup script for SoftiCAR EAS
+# softicar-samba-server-setup.sh
 #
-# Sets up a Samba file store server for a new SoftiCAR EAS instance:
+# Sets up a Samba based file store server for a SoftiCAR EAS instance:
+# - Installs Samba.
 # - Creates a new, login-less system user with a randomized password.
-# - Configures an SMB share.
+# - Adds that user to the Samba configuration.
+# - Creates a share directory, and configures a share.
 #
 # Usage: ./softicar-samba-server-setup.sh
 #
@@ -19,19 +21,22 @@ SAMBA_SHARE_DIR=/var/lib/softicar-files
 SAMBA_USER=softicar-files
 
 
-# Greetings
-echo "This will install and configure the Samba based file store for a new SoftiCAR EAS instance."
+# ---- Greetings ---- #
+
+echo "This will install and configure the Samba based file store for a SoftiCAR EAS instance."
 read -p "Continue? [Y/n]: " -r; REPLY=${REPLY:-"Y"};
 [[ ! $REPLY =~ ^[Yy]$ ]] \
 	&& { echo "Bye."; exit 1; }
 
 
-# Assert non-root user
+# ---- Assert non-root user ---- #
+
 [[ `id -u` = 0 ]] \
 	&& { echo "FATAL: This script must NOT be run as root."; exit 1; }
 
 
-# Install Samba if necessary
+# ---- Install Samba if necessary ---- #
+
 if [[ $(which smbd) ]]; then
 	read -p "Samba is already installed. Continue anyway? [y/N]: " -r
 	[[ ! $REPLY =~ ^[Yy]$ ]] \
@@ -42,11 +47,10 @@ else
 fi
 
 
-# Create Samba user if necessary
+# ---- Create Samba user if necessary ---- #
+
 read -erp "Enter the name of the Samba user [$SAMBA_USER]: "; REPLY=${REPLY:-"$SAMBA_USER"};
 SAMBA_USER=$REPLY
-
-echo "entered: $SAMBA_USER"
 
 if id "$SAMBA_USER" > /dev/null 2>&1; then
 	read -p "System user $SAMBA_USER already exists. Continue anyway? [y/N]: " -r
@@ -59,7 +63,8 @@ else
 fi
 
 
-# Create Samba share dir
+# ---- Create Samba share dir ---- #
+
 read -erp "Enter the Samba share directory [$SAMBA_SHARE_DIR]: "; REPLY=${REPLY:-"$SAMBA_SHARE_DIR"};
 SAMBA_SHARE_DIR=$REPLY
 if [[ -d "$SAMBA_SHARE_DIR" ]]; then
@@ -72,12 +77,14 @@ else
 fi
 
 
-# Change permissions of Samba share dir
+# ---- Change permissions of Samba share dir ---- #
+
 sudo chown -R $SAMBA_USER:$SAMBA_USER $SAMBA_SHARE_DIR \
 	|| { echo "FATAL: Failed to change permissions of Samba share directory: $SAMBA_SHARE_DIR"; exit 1; }
 
 
-# Configure Samba user with generated password
+# ---- Configure Samba user with generated password ---- #
+
 if sudo pdbedit -L -u $SAMBA_USER > /dev/null 2>&1; then
 	read -p "Samba user $SAMBA_USER is already configured. Continue anyway? [y/N]: " -r
 	[[ ! $REPLY =~ ^[Yy]$ ]] \
@@ -93,12 +100,14 @@ else
 fi
 
 
-# Rename existing Samba configuration file
+# ---- Rename existing Samba configuration file ---- #
+
 [[ -f $SAMBA_CONFIG_FILE ]] \
 	&& { sudo mv $SAMBA_CONFIG_FILE $SAMBA_CONFIG_FILE".old_$(date +%F_%H-%M-%S)" || echo "FATAL: Failed to rename $SAMBA_CONFIG_FILE."; exit 1; }
 
 
-# Create new Samba configuration file
+# ---- Create new Samba configuration file ---- #
+
 SMB_CONF_CONTENT="
 path = $SAMBA_SHARE_DIR
 read only = no
@@ -108,7 +117,8 @@ echo $SMB_CONF_CONTENT | sudo tee $SAMBA_CONFIG_FILE > /dev/null \
 	|| { echo "FATAL: Failed to create $SAMBA_CONFIG_FILE"; exit 1; }
 
 
-# Profit
+# ---- Profit ---- #
+
 echo "All done."
 echo ""
 
