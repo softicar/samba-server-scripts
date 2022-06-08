@@ -16,7 +16,7 @@
 #
 ########################################################################################
 
-SAMBA_CONFIG_FILE=/etc/smb/smb.conf
+SAMBA_CONFIG_FILE=/etc/samba/smb.conf
 SAMBA_SHARE_DIR=/var/lib/softicar-files
 SAMBA_USER=softicar-files
 
@@ -24,9 +24,8 @@ SAMBA_USER=softicar-files
 # ---- Greetings ---- #
 
 echo "This will install and configure the Samba based file store for a SoftiCAR EAS instance."
-read -p "Continue? [Y/n]: " -r; REPLY=${REPLY:-"Y"};
-[[ ! $REPLY =~ ^[Yy]$ ]] \
-	&& { echo "Bye."; exit 1; }
+read -rp "Continue? [Y/n]: "; REPLY=${REPLY:-"Y"};
+[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
 
 
 # ---- Assert non-root user ---- #
@@ -38,11 +37,12 @@ read -p "Continue? [Y/n]: " -r; REPLY=${REPLY:-"Y"};
 # ---- Install Samba if necessary ---- #
 
 if [[ $(which smbd) ]]; then
-	read -p "Samba is already installed. Continue anyway? [y/N]: " -r
-	[[ ! $REPLY =~ ^[Yy]$ ]] \
-		&& { echo "Bye."; exit 1; }
+	read -rp "Samba is already installed. Skip installation and continue? [y/N]: "
+	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
 else
+	echo "Installing Samba..."
 	sudo apt-get update && sudo apt-get install -y samba \
+		&& { echo "Samba installed."; } \
 		|| { echo "FATAL: Failed to install Samba."; exit 1; }
 fi
 
@@ -53,12 +53,12 @@ read -erp "Enter the name of the Samba user [$SAMBA_USER]: "; REPLY=${REPLY:-"$S
 SAMBA_USER=$REPLY
 
 if id "$SAMBA_USER" > /dev/null 2>&1; then
-	read -p "System user $SAMBA_USER already exists. Continue anyway? [y/N]: " -r
-	[[ ! $REPLY =~ ^[Yy]$ ]] \
-		&& { echo "Bye."; exit 1; }
+	read -rp "System user $SAMBA_USER already exists. Skip user creation and continue? [y/N]: "
+	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
 else
-	# Create Samba user
+	echo "Creating Samba user..."
 	sudo adduser --no-create-home --disabled-password --disabled-login --gecos "" $SAMBA_USER \
+		&& { echo "Samba user created."; } \
 		|| { echo "FATAL: Failed to create Samba user: $SAMBA_USER"; exit 1; }
 fi
 
@@ -67,43 +67,52 @@ fi
 
 read -erp "Enter the Samba share directory [$SAMBA_SHARE_DIR]: "; REPLY=${REPLY:-"$SAMBA_SHARE_DIR"};
 SAMBA_SHARE_DIR=$REPLY
+
 if [[ -d "$SAMBA_SHARE_DIR" ]]; then
-	read -p "Samba share directory $SAMBA_SHARE_DIR already exists. Continue anyway? [y/N]: " -r
-	[[ ! $REPLY =~ ^[Yy]$ ]] \
-		&& { echo "Bye."; exit 1; }
+	read -rp "Samba share directory $SAMBA_SHARE_DIR already exists. Continue anyway? [y/N]: "
+	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
 else
+	echo "Creating Samba share directory..."
 	sudo mkdir "$SAMBA_SHARE_DIR" \
+		&& { echo "Samba share directory created."; } \
 		|| { echo "FATAL: Failed to create Samba share directory: $SAMBA_SHARE_DIR"; exit 1; }
 fi
 
 
-# ---- Change permissions of Samba share dir ---- #
+# ---- Change ownership of Samba share dir ---- #
 
+echo "Changing ownership of Samba share directory..."
 sudo chown -R $SAMBA_USER:$SAMBA_USER $SAMBA_SHARE_DIR \
-	|| { echo "FATAL: Failed to change permissions of Samba share directory: $SAMBA_SHARE_DIR"; exit 1; }
+	&& { echo "Changed ownership of Samba share directory." } \
+	|| { echo "FATAL: Failed to change ownership of Samba share directory: $SAMBA_SHARE_DIR"; exit 1; }
 
 
 # ---- Configure Samba user with generated password ---- #
 
 if sudo pdbedit -L -u $SAMBA_USER > /dev/null 2>&1; then
-	read -p "Samba user $SAMBA_USER is already configured. Continue anyway? [y/N]: " -r
-	[[ ! $REPLY =~ ^[Yy]$ ]] \
-		&& { echo "Bye."; exit 1; }
+	read -rp "Samba user $SAMBA_USER is already configured. Continue anyway? [y/N]: "
+	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
 else
-	# Generate Samba password
+	echo "Generating Samba password..."
 	SAMBA_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 24) \
+		&& { echo "Samba password generated." } \
 		|| { echo "FATAL: Failed to generate Samba password."; exit 1; }
 
-	# Configure Samba user
+	echo "Configuring Samba user..."
 	(echo "$SAMBA_PASSWORD"; echo "$SAMBA_PASSWORD") | sudo smbpasswd -s -a $SAMBA_USER \
+		&& { echo "Samba user configured." } \
 		|| { echo "FATAL: Failed to configure Samba user: $SAMBA_USER"; exit 1; }
 fi
 
 
 # ---- Rename existing Samba configuration file ---- #
 
-[[ -f $SAMBA_CONFIG_FILE ]] \
-	&& { sudo mv $SAMBA_CONFIG_FILE $SAMBA_CONFIG_FILE".old_$(date +%F_%H-%M-%S)" || echo "FATAL: Failed to rename $SAMBA_CONFIG_FILE."; exit 1; }
+if [[ -f $SAMBA_CONFIG_FILE ]]; then
+	echo "Renaming existing Samba configuration file..."
+	sudo mv $SAMBA_CONFIG_FILE $SAMBA_CONFIG_FILE".old_$(date +%F_%H-%M-%S)" \
+		&& { echo "Existing Samba configuration file renamed." } \
+		|| { echo "FATAL: Failed to rename $SAMBA_CONFIG_FILE."; exit 1; }
+fi
 
 
 # ---- Create new Samba configuration file ---- #
@@ -113,7 +122,9 @@ path = $SAMBA_SHARE_DIR
 read only = no
 valid users = $SAMBA_USER
 "
+echo "Creating Samba configuration file..."
 echo $SMB_CONF_CONTENT | sudo tee $SAMBA_CONFIG_FILE > /dev/null \
+	&& { echo "Samba configuration file created." } \
 	|| { echo "FATAL: Failed to create $SAMBA_CONFIG_FILE"; exit 1; }
 
 
