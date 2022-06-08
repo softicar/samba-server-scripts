@@ -140,11 +140,12 @@ echo $SMB_CONF_CONTENT | sudo tee $SAMBA_CONFIG_FILE > /dev/null \
 echo "All done."
 echo ""
 
-echo "vvvv  STORE THIS INFORMATION IN A SAFE PLACE  vvvv"
-echo "Samba credentials:"
-echo "User: "$SAMBA_USER
-echo "Password: "$([[ -v SAMBA_PASSWORD ]] && echo $SAMBA_PASSWORD || echo "(unchanged)" )
-echo "^^^^  STORE THIS INFORMATION IN A SAFE PLACE  ^^^^"
-echo ""
+if [[ -v SAMBA_PASSWORD ]]; then
+	echo "vvvv  STORE THIS INFORMATION IN A SAFE PLACE  vvvv"
+	echo "Samba User:     "$SAMBA_USER
+	echo "Samba Password: "$SAMBA_PASSWORD
+	echo "^^^^  STORE THIS INFORMATION IN A SAFE PLACE  ^^^^"
+	echo ""
+fi
 
 echo "Bye."
