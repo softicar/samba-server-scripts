@@ -4,11 +4,13 @@
 #
 # softicar-samba-server-setup.sh
 #
-# Sets up a Samba based file store server for a SoftiCAR EAS instance:
+# Sets up a Samba server as a file store for a SoftiCAR EAS instance:
 # - Installs Samba.
 # - Creates a new, login-less system user with a randomized password.
 # - Adds that user to the Samba configuration.
-# - Creates a share directory, and configures a share.
+# - Creates a share directory, and configures the share.
+#
+# After running this script, the Samba based file store will be ready to use.
 #
 # Usage: ./softicar-samba-server-setup.sh
 #
@@ -17,6 +19,7 @@
 ########################################################################################
 
 SAMBA_CONFIG_FILE=/etc/samba/smb.conf
+SAMBA_SHARE=softicar-files
 SAMBA_SHARE_DIR=/var/lib/softicar-files
 SAMBA_USER=softicar-files
 
@@ -76,7 +79,7 @@ read -erp "Enter the Samba share directory [$SAMBA_SHARE_DIR]: "; REPLY=${REPLY:
 SAMBA_SHARE_DIR=$REPLY
 
 if [[ -d "$SAMBA_SHARE_DIR" ]]; then
-	read -rp "Samba share directory $SAMBA_SHARE_DIR already exists. Continue anyway? [y/N]: "
+	read -rp "Samba share directory $SAMBA_SHARE_DIR already exists. Use that directory and continue? [y/N]: "
 	assert_reply_yes_or_exit
 else
 	echo "Creating Samba share directory..."
@@ -97,7 +100,7 @@ sudo chown -R $SAMBA_USER:$SAMBA_USER $SAMBA_SHARE_DIR \
 # ---- Configure Samba user with generated password ---- #
 
 if sudo pdbedit -L -u $SAMBA_USER > /dev/null 2>&1; then
-	read -rp "Samba user $SAMBA_USER is already configured. Continue anyway? [y/N]: "
+	read -rp "Samba user $SAMBA_USER is already configured. Use that user and continue? [y/N]: "
 	assert_reply_yes_or_exit
 else
 	echo "Generating Samba password..."
@@ -124,23 +127,37 @@ fi
 
 # ---- Create new Samba configuration file ---- #
 
-SMB_CONF_CONTENT="
+echo "Creating Samba configuration file..."
+cat << EOF | sudo tee $SAMBA_CONFIG_FILE > /dev/null && { echo "Samba configuration file created."; } || { echo "FATAL: Failed to create Samba configuration file: $SAMBA_CONFIG_FILE"; exit 1; }
+[$SAMBA_SHARE]
 path = $SAMBA_SHARE_DIR
 read only = no
 valid users = $SAMBA_USER
-"
-echo "Creating Samba configuration file..."
-echo $SMB_CONF_CONTENT | sudo tee $SAMBA_CONFIG_FILE > /dev/null \
-	&& { echo "Samba configuration file created."; } \
-	|| { echo "FATAL: Failed to create $SAMBA_CONFIG_FILE"; exit 1; }
+EOF
+
+
+# ---- Enable Samba daemon ---- #
+
+echo "Enabling Samba daemon..."
+sudo systemctl enable smbd > /dev/null 2>&1 \
+	&& { echo "Samba daemon enabled."; } \
+	|| { echo "FATAL: Failed to enable Samba daemon."; exit 1; }
+
+
+# ---- Restart Samba daemon ---- #
+
+echo "Restarting Samba daemon..."
+sudo systemctl restart smbd \
+	&& { echo "Samba daemon restarted."; } \
+	|| { echo "FATAL: Failed to restart Samba daemon."; exit 1; }
 
 
 # ---- Profit ---- #
 
-echo "All done."
-echo ""
+echo "Samba server was installed and set up successfully."
 
 if [[ -v SAMBA_PASSWORD ]]; then
+	echo ""
 	echo "vvvv  STORE THIS INFORMATION IN A SAFE PLACE  vvvv"
 	echo "Samba User:     "$SAMBA_USER
 	echo "Samba Password: "$SAMBA_PASSWORD
