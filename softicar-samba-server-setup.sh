@@ -21,11 +21,18 @@ SAMBA_SHARE_DIR=/var/lib/softicar-files
 SAMBA_USER=softicar-files
 
 
+# ---- Functions ---- #
+
+function assert_reply_yes_or_exit {
+	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
+}
+
+
 # ---- Greetings ---- #
 
 echo "This will install and configure the Samba based file store for a SoftiCAR EAS instance."
 read -rp "Continue? [Y/n]: "; REPLY=${REPLY:-"Y"};
-[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
+assert_reply_yes_or_exit
 
 
 # ---- Assert non-root user ---- #
@@ -38,7 +45,7 @@ read -rp "Continue? [Y/n]: "; REPLY=${REPLY:-"Y"};
 
 if [[ $(which smbd) ]]; then
 	read -rp "Samba is already installed. Skip installation and continue? [y/N]: "
-	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
+	assert_reply_yes_or_exit
 else
 	echo "Installing Samba..."
 	sudo apt-get update && sudo apt-get install -y samba \
@@ -54,7 +61,7 @@ SAMBA_USER=$REPLY
 
 if id "$SAMBA_USER" > /dev/null 2>&1; then
 	read -rp "System user $SAMBA_USER already exists. Skip user creation and continue? [y/N]: "
-	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
+	assert_reply_yes_or_exit
 else
 	echo "Creating Samba user..."
 	sudo adduser --no-create-home --disabled-password --disabled-login --gecos "" $SAMBA_USER \
@@ -70,7 +77,7 @@ SAMBA_SHARE_DIR=$REPLY
 
 if [[ -d "$SAMBA_SHARE_DIR" ]]; then
 	read -rp "Samba share directory $SAMBA_SHARE_DIR already exists. Continue anyway? [y/N]: "
-	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
+	assert_reply_yes_or_exit
 else
 	echo "Creating Samba share directory..."
 	sudo mkdir "$SAMBA_SHARE_DIR" \
@@ -91,7 +98,7 @@ sudo chown -R $SAMBA_USER:$SAMBA_USER $SAMBA_SHARE_DIR \
 
 if sudo pdbedit -L -u $SAMBA_USER > /dev/null 2>&1; then
 	read -rp "Samba user $SAMBA_USER is already configured. Continue anyway? [y/N]: "
-	[[ ! $REPLY =~ ^[Yy]$ ]] && { echo "Bye."; exit 1; }
+	assert_reply_yes_or_exit
 else
 	echo "Generating Samba password..."
 	SAMBA_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 24) \
