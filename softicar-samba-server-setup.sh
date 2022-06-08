@@ -90,7 +90,7 @@ fi
 
 echo "Changing ownership of Samba share directory..."
 sudo chown -R $SAMBA_USER:$SAMBA_USER $SAMBA_SHARE_DIR \
-	&& { echo "Changed ownership of Samba share directory." } \
+	&& { echo "Changed ownership of Samba share directory."; } \
 	|| { echo "FATAL: Failed to change ownership of Samba share directory: $SAMBA_SHARE_DIR"; exit 1; }
 
 
@@ -102,12 +102,12 @@ if sudo pdbedit -L -u $SAMBA_USER > /dev/null 2>&1; then
 else
 	echo "Generating Samba password..."
 	SAMBA_PASSWORD=$(tr -dc A-Za-z0-9 </dev/urandom | head -c 24) \
-		&& { echo "Samba password generated." } \
+		&& { echo "Samba password generated."; } \
 		|| { echo "FATAL: Failed to generate Samba password."; exit 1; }
 
 	echo "Configuring Samba user..."
 	(echo "$SAMBA_PASSWORD"; echo "$SAMBA_PASSWORD") | sudo smbpasswd -s -a $SAMBA_USER \
-		&& { echo "Samba user configured." } \
+		&& { echo "Samba user configured."; } \
 		|| { echo "FATAL: Failed to configure Samba user: $SAMBA_USER"; exit 1; }
 fi
 
@@ -117,7 +117,7 @@ fi
 if [[ -f $SAMBA_CONFIG_FILE ]]; then
 	echo "Renaming existing Samba configuration file..."
 	sudo mv $SAMBA_CONFIG_FILE $SAMBA_CONFIG_FILE".old_$(date +%F_%H-%M-%S)" \
-		&& { echo "Existing Samba configuration file renamed." } \
+		&& { echo "Existing Samba configuration file renamed."; } \
 		|| { echo "FATAL: Failed to rename $SAMBA_CONFIG_FILE."; exit 1; }
 fi
 
@@ -131,7 +131,7 @@ valid users = $SAMBA_USER
 "
 echo "Creating Samba configuration file..."
 echo $SMB_CONF_CONTENT | sudo tee $SAMBA_CONFIG_FILE > /dev/null \
-	&& { echo "Samba configuration file created." } \
+	&& { echo "Samba configuration file created."; } \
 	|| { echo "FATAL: Failed to create $SAMBA_CONFIG_FILE"; exit 1; }
 
 
