@@ -133,6 +133,7 @@ cat << EOF | sudo tee $SAMBA_CONFIG_FILE > /dev/null && { echo "Samba configurat
 path = $SAMBA_SHARE_DIR
 read only = no
 valid users = $SAMBA_USER
+create mask = 0644
 EOF
 
 
