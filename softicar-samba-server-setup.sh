@@ -129,6 +129,9 @@ fi
 
 echo "Creating Samba configuration file..."
 cat << EOF | sudo tee $SAMBA_CONFIG_FILE > /dev/null && { echo "Samba configuration file created."; } || { echo "FATAL: Failed to create Samba configuration file: $SAMBA_CONFIG_FILE"; exit 1; }
+[global]
+client min protocol = NT1
+
 [$SAMBA_SHARE]
 path = $SAMBA_SHARE_DIR
 read only = no
