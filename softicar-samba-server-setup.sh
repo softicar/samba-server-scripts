@@ -19,9 +19,9 @@
 ########################################################################################
 
 SAMBA_CONFIG_FILE=/etc/samba/smb.conf
-SAMBA_SHARE=files
+SAMBA_SHARE=stored-files
 SAMBA_SHARE_DIR=/var/lib/stored-files
-SAMBA_USER=files
+SAMBA_USER=stored-files
 
 
 # ---- Functions ---- #
@@ -164,8 +164,9 @@ echo "Samba server was installed and set up successfully."
 if [[ -v SAMBA_PASSWORD ]]; then
 	echo ""
 	echo "vvvv  STORE THIS INFORMATION IN A SAFE PLACE  vvvv"
-	echo "Samba User:     "$SAMBA_USER
-	echo "Samba Password: "$SAMBA_PASSWORD
+	echo "Samba User:      "$SAMBA_USER
+	echo "Samba Workgroup: WORKGROUP"
+	echo "Samba Password:  "$SAMBA_PASSWORD
 	echo "^^^^  STORE THIS INFORMATION IN A SAFE PLACE  ^^^^"
 	echo ""
 fi
