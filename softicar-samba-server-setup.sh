@@ -19,9 +19,9 @@
 ########################################################################################
 
 SAMBA_CONFIG_FILE=/etc/samba/smb.conf
-SAMBA_SHARE=softicar-files
-SAMBA_SHARE_DIR=/var/lib/softicar-files
-SAMBA_USER=softicar-files
+SAMBA_SHARE=files
+SAMBA_SHARE_DIR=/var/lib/stored-files
+SAMBA_USER=files
 
 
 # ---- Functions ---- #
